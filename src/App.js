@@ -78,6 +78,7 @@ function App() {
           </div>
           <br></br>
           <div className='text-center'>
+
           <button  className="form-btn" onClick={handleAddMovie}>Add Movies</button>
           </div>
         </form>
@@ -87,6 +88,7 @@ function App() {
       </section>
       <section>
         {loading && <div className="spinner-border" role="status">
+
           <span className="visually-hidden">Loading...</span>
         </div>}
        {!loading && <MoviesList movies={movies} />}
