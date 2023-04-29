@@ -1,100 +1,83 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 import MoviesList from './components/MoviesList';
-
-import './App.css'
+import AddMovie from './components/AddMovie';
+import './App.css';
 
 function App() {
   const [movies, setMovies] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(false);
-  const [addedMovie,setAddedMovie]=useState({title:"",openingTxt:"",releaseDate:""});
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  const fetchMoviesHandler=useCallback( async function() {
-    setError(null)
+  const fetchMoviesHandler = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      let responce = await fetch('https://swapi.dev/api/films/');
-      if(!responce.ok){
-        throw new Error("Something went wrong...Retrying!");
+      const response = await fetch('https://react-7896e-default-rtdb.firebaseio.com/movies.json');
+      if (!response.ok) {
+        throw new Error('Something went wrong!');
       }
-      responce = await responce.json();
-      const transformedMovies = responce.results.map((movieData) => {
-        return {
-          id: movieData.episode_id,
-          title: movieData.title,
-          openingText: movieData.opening_crawl,
-          releaseDate: movieData.release_date,
-        }
-      })
-      setMovies(transformedMovies);
+
+      const data = await response.json();
+
+      const loadedMovies = [];
+
+      for (const key in data) {
+        loadedMovies.push({
+          id: key,
+          title: data[key].title,
+          openingText: data[key].openingText,
+          releaseDate: data[key].releaseDate,
+        });
+      }
+
+      setMovies(loadedMovies);
     } catch (error) {
       setError(error.message);
     }
-    setLoading(false);
-  },[]);
+    setIsLoading(false);
+  }, []);
 
+  useEffect(() => {
+    fetchMoviesHandler();
+  }, [fetchMoviesHandler]);
 
-  useEffect(()=>{
-      fetchMoviesHandler();
-  },[fetchMoviesHandler])
-
-  const handleAddMovie=(e)=>{
-    e.preventDefault();
-    let newMovieObj={
-      ...addedMovie
-    }
-    console.log(newMovieObj)
+  async function addMovieHandler(movie) {
+    const responce=await fetch('https://react-7896e-default-rtdb.firebaseio.com/movies.json',{
+      method:"POST",
+      body:JSON.stringify(movie),
+      headers:{
+        'Content-Type':'application/json'
+      }
+    })
+    const data=await responce.json();
+    console.log(data);
+    fetchMoviesHandler();
   }
 
-  
-  const handleOpening=(e)=>{
-    setAddedMovie({title:addedMovie.title,openingTxt:e.target.value,releaseDate:addedMovie.releaseDate})
-    console.log("changing")
+  let content = <p>Found no movies.</p>;
+
+  if (movies.length > 0) {
+    content = <MoviesList movies={movies} fetchMoviesHandler={fetchMoviesHandler}/>;
   }
-  const handleDate=(e)=>{
-    setAddedMovie({title:addedMovie.title,openingTxt:addedMovie.openingTxt,releaseDate:e.target.value})
-    console.log("changing")
+
+  if (error) {
+    content = <p>{error}</p>;
   }
-  const handleTitle=(e)=>{
-    setAddedMovie({title:e.target.value,openingTxt:addedMovie.openingTxt,releaseDate:addedMovie.releaseDate})
-    console.log("changing")
+
+  if (isLoading) {
+    content = <p>Loading...</p>;
   }
+
   return (
     <React.Fragment>
-      
-        <form className='addform'>
-          <div className='my-3'>
-            <div><label htmlFor="title" className='fw-bold'>Title</label></div>
-            <div><input type="text" name="title" id="title" value={addedMovie.title} className='w-100 border border-dark border-2 rounded-3'style={{height:"2rem",width:"100%",border:"0.5px solid grey", borderRadius:"5px"}}onChange={handleTitle}/></div>
-          </div>
-          <div className='my-3'>
-          <div><label htmlFor="opening-txt" className='fw-bold'>Opening Text</label></div>
-          <div><input type="text" name="opening-txt" id="opening-txt" value={addedMovie.openingTxt} onChange={handleOpening} style={{height:"5rem",width:"100%",border:"0.5px solid grey", borderRadius:"5px"}}/></div>
-          </div>
-          <div className='my-3'>
-          <div><label htmlFor="date" className='fw-bold'>Release Date</label></div>
-          <div><input type="date" name="date" id="date" value={addedMovie.releaseDate} onChange={handleDate}style={{height:"2rem",width:"100%",border:"0.5px solid grey", borderRadius:"5px"}}className='w-100 border border-dark border-2 rounded-3'/></div>
-          </div>
-          <br></br>
-          <div className='text-center'>
-
-          <button  className="form-btn" onClick={handleAddMovie}>Add Movies</button>
-          </div>
-        </form>
-     
+      <section>
+        <AddMovie onAddMovie={addMovieHandler} />
+      </section>
       <section>
         <button onClick={fetchMoviesHandler}>Fetch Movies</button>
       </section>
-      <section>
-        {loading && <div className="spinner-border" role="status">
-
-          <span className="visually-hidden">Loading...</span>
-        </div>}
-       {!loading && <MoviesList movies={movies} />}
-       {!loading && movies.length===0 && !error && <p>No Movies Found.</p>}
-       {!loading && error && <p>{error}</p>}
-      </section>
+      <section>{content}</section>
     </React.Fragment>
   );
 }
